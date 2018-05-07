@@ -1,0 +1,68 @@
+# source me
+#
+# name: dynamic_term_backgroun_per_folder, version 2018-05-07
+# author: bartek.rychlicki@gmail.com
+# summary: Change terminal background without reloading xrdb, configured per folder
+#
+# Change terminal background dynamically for directories that
+# contain .rgb file, file format: six hexadecimal bytes, example:
+# $ cat .rgb
+# 832e31
+#
+# I like visual cues and have many projects and many open terminals in a tiling WM,
+# this will help me
+#
+# Check if you have full true color support, I had to compile xterm version 333
+# curl https://raw.githubusercontent.com/JohnMorales/dotfiles/master/colors/24-bit-color.sh | bash
+# read for more: https://gist.github.com/XVilka/8346728
+#
+# $ xterm -version
+# X.Org 7.7.0(333)
+#
+# To install, source this file
+#
+# Inspiration and thanks to:
+# - https://superuser.com/a/593228/160379
+# - https://github.com/pyenv/pyenv/blob/master/libexec/pyenv-version-file
+# - https://gist.github.com/XVilka/8346728
+#
+# On my machine the function took between 1 and 3 miliseconds,
+# check yourself by uncommenting double hash lines,
+#
+# TODO: will it work on zsh?
+# TODO: on sourcing, detect terminal true-color compatibility and offer helpful direction
+# TODO: prints newlines for no reason
+
+# makes no sense outside X
+test -z $DISPLAY && return
+
+function_exists() {
+    # https://stackoverflow.com/a/9529981/1472229
+    declare -f -F $1 > /dev/null
+    return $?
+}
+
+# prevent double sourcing
+function_exists _dynamic_term_backgroun_per_folder && { echo Exists; return; }
+
+_dynamic_term_backgroun_per_folder() {
+  ## start=$(date +%s%N)
+  default='000011'
+  local root="$PWD"
+  while ! [[ "$root" =~ ^//[^/]*$ ]]; do
+    if [ -f "${root}/.rgb" ]; then
+      local c=$(<${root}/.rgb)
+      echo -e "\e]11;rgb:${c:0:2}/${c:2:2}/${c:4:2}\a"
+      ## echo $(( ($(date +%s%N) - $start ) / 1000  / 1000 ))ms
+      return 0
+    fi
+    [ -n "$root" ] || break
+    root="${root%/*}"
+  done
+  echo -e "\e]11;rgb:${default:0:2}/${default:2:2}/${default:4:2}\a"
+  ## echo $(( ($(date +%s%N) - $start ) / 1000  / 1000 ))ms
+}
+
+function_exists _dynamic_term_backgroun_per_folder || {
+  export PROMPT_COMMAND="$PROMPT_COMMAND;_dynamic_term_backgroun_per_folder"
+}
